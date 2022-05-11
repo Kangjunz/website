@@ -1,0 +1,380 @@
+---
+title: "Bike Sharing Project"
+author: "Kangjun Zou"
+date: '2022-05-10'
+output:
+  html_document: default
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## The business task
+
+The end goal of this project is to provide insights through data
+analysis to assist all stakeholders (Lily Moreno, Cyclistic marketing
+team and Cyclistic executive team) to design marketing strategies aimed
+at converting casual riders to annual members.
+
+To do that,three questions need to be addresses: 1. How do annual
+members and casual riders use Cyclistic bikes differently? 2. Why would
+casual riders buy Cyclistic annual memberships? 3. How can Cyclistic use
+digital media to influence casual riders to become members?
+
+This project is conducted to answer **the first question only** and
+provide a report with the following deliverable:
+
+1.  A clear statement of the business task
+
+2.  A description of all data sources used
+
+3.  Documentations of any cleaning and manipulation of data
+
+4.  A summary of the analysis
+
+5.  Supporting visualizations and key findings
+
+6.  Top three 3 recommendations based on analysis
+
+## The data sources used
+
+For this project, we will use the previous 12 months (from 2021-04 to
+2022-03) of Cyclistic's historical trip data, provided by Motivate
+International Inc, under this [license](www.divvybikes.com)) to analyze
+and identify trends.
+
+## Documentation of data cleaning or manipulation
+
+1.  **Import data from 2021-04 to 2022-03**
+
+```{r include=FALSE}
+library(readr)
+X202104_trip_data <- read_csv("202104_trip_data.csv")
+View(X202104_trip_data)
+library(readr)
+X202105_trip_data <- read_csv("202105_trip_data.csv")
+View(X202105_trip_data)
+library(readr)
+X202106_trip_data <- read_csv("202106_trip_data.csv")
+View(X202106_trip_data)
+library(readr)
+X202107_trip_data <- read_csv("202107_trip_data.csv")
+View(X202107_trip_data)
+library(readr)
+X202108_trip_data <- read_csv("202108_trip_data.csv")
+View(X202108_trip_data)
+library(readr)
+X202109_trip_data <- read_csv("202109_trip_data.csv")
+View(X202109_trip_data)
+library(readr)
+X202110_trip_data <- read_csv("202110_trip_data.csv")
+View(X202110_trip_data)
+library(readr)
+X202111_trip_data <- read_csv("202111_trip_data.csv")
+View(X202111_trip_data)
+library(readr)
+X202112_trip_data <- read_csv("202112_trip_data.csv")
+View(X202112_trip_data)
+library(readr)
+X202201_trip_data <- read_csv("202201_trip_data.csv")
+View(X202201_trip_data)
+library(readr)
+X202202_trip_data <- read_csv("202202_trip_data.csv")
+View(X202201_trip_data)
+library(readr)
+X202203_trip_data <- read_csv("202203_trip_data.csv")
+View(X202203_trip_data)
+```
+
+*Findings:* All 12 data frames have the same structure
+
+2.  **Combine data from 2021-04 to 2022-03 for easier data cleaning and
+    manipulation**
+
+```{r}
+trip_data_combined<-rbind(X202104_trip_data,X202105_trip_data,X202106_trip_data,X202107_trip_data,X202108_trip_data,X202109_trip_data,X202110_trip_data,X202111_trip_data,X202112_trip_data,X202201_trip_data,X202202_trip_data,X202203_trip_data)
+```
+
+*Findings:* Notice lots of "NA"
+
+3.  **Drop "NA" to avoid misleading data, assuming entries with "NA" are
+    not real rides by users**
+
+```{r include=FALSE}
+library(tidyverse)
+trip_data_nadrop<-trip_data_combined %>% drop_na()
+```
+
+4.  **Add a new column "ride_length" to calculate time intervals between
+    "started_at" and "ended_at" and rename it as
+    "trip_data_nadrop_ridelength"**
+
+```{r}
+x<-trip_data_nadrop
+x$ride_length<-difftime(trip_data_nadrop$ended_at,trip_data_nadrop$started_at)
+trip_data_nadrop_ridelength<-x
+```
+
+5.  **Find rides with "ride_length"\<=0, further filtering requires
+    investigation into the data set with stakeholders**
+
+```{r}
+outliers<-filter(trip_data_nadrop_ridelength,ride_length<=0)
+```
+
+*Findings:* There are 207 rides with "ride_length"\<=0
+
+6.  **Filter out rides with "ride_length"\<=0**
+
+```{r}
+trip_data_nadrop_ridelength_nooutliers<-filter(trip_data_nadrop_ridelength,ride_length>0)
+```
+
+7.  **Create new columns: "weekday", "month", "quarter", "hour"**
+
+```{r}
+x<-trip_data_nadrop_ridelength_nooutliers
+x$weekday<-weekdays(trip_data_nadrop_ridelength_nooutliers$started_at)
+x$month<-months(trip_data_nadrop_ridelength_nooutliers$started_at)
+x$quarter<-quarters(trip_data_nadrop_ridelength_nooutliers$started_at)
+x$hour<-format(trip_data_nadrop_ridelength_nooutliers$started_at,"%H")
+trip_data_clean<-x
+remove(x)
+```
+
+## Visualizations and key findings
+
+1.  **Which user type bikes more?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(mapping = aes(x=member_casual,fill=member_casual))+labs(title=("Which user type bikes more?"),subtitle ="Casual vs Member from 2021-04 to 2022-03", x="User type", y="Number of rides",caption = "1e+06=1,000,000, Data provided by Motivate International Inc.")+scale_fill_discrete(name="User type")
+```
+
+```{r}
+trip_data_clean %>% group_by(member_casual) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100,total_ride_length=sum(ride_length),average_ride_length=sum(total_ride_length/count))
+```
+
+*Findings:*
+
+Rides taken by members are close to 56% from 2021-04 to 2022-03 verse
+44% from the casual. But the casual, on average, have much longer rides
+than the member. The casual either bike much slower or for much longer
+distance than members.
+
+2.  **Which bike type do riders like the most and how are different
+    bikes used different?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(mapping = aes(x=member_casual,fill=member_casual))+labs(title=("Which bike type do riders like the most?"),subtitle ="Casual vs Member from 2021-04 to 2022-03", x="User type", y="Number of rides",caption = "Data provided by Motivate International Inc.")+scale_fill_discrete(name="User type")+facet_wrap(~rideable_type)
+```
+
+```{r}
+trip_data_clean %>% group_by(member_casual,rideable_type) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(count))
+```
+
+*Findings:*
+
+Classic bikes are the most popular bike type for both members and the
+casual.
+
+Docked bikes are the least popular ones and interestingly, docked bikes
+are only taken by the casual. More data regarding different pricing
+plans for each type of bike and financial aspect of the analysis are
+needed to find out why.
+
+3.  **How so riders behave differently each day of the week?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(position = "dodge",mapping = aes(x=factor(weekday, level=c('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')),fill=member_casual))+labs(title=("How so riders behave differently each of the week?"),subtitle ="Casual vs Member from 2021-04 to 2022-03", x="User type", y="Number of rides",caption = "1e+06=1,000,000, Data provided by Motivate International Inc.")+scale_fill_discrete(name="User type")
+```
+
+```{r}
+trip_data_clean %>% group_by(member_casual,weekday) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(count))
+```
+
+*Findings:*
+
+Members mostly bike during week days and have its peak on Wednesday and
+hit its lows on weekends.
+
+The casual bike mostly on weekends and you start to notice increase in
+usage from Friday. They bikes much less and number of rides stay
+relatively low and consistent on the other week days (Monday, Tuesday,
+Wednesday, Thursday).
+
+On week days, members bike more than the casual while on weekends, the
+casual bike more than members.
+
+4.  **How do riders behave differently across all hours of each day of
+    the week?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(mapping = aes(x=hour,fill=member_casual))+labs(title=("How do riders behave differently across all hours of each day of the week?"),subtitle ="Casual vs Member from 2021-04 to 2022-03", x="Hours of the day", y="Number of rides",caption = "Data provided by Motivate International Inc.")+scale_fill_discrete(name="User type")+facet_wrap(factor(weekday,levels = c('Monday','Tuesday','Wednesday','Thursday', 'Friday','Saturday','Sunday'))~.)+theme(axis.text.x = element_text(angle = 90,size = 7,))
+```
+
+```{r}
+trip_data_clean %>% group_by(member_casual,hour) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(hour))
+```
+
+*Findings:*
+
+On week days, both members and the casual have very similar behavior
+pattern, where number of rides reaches its first peak of the day at 8am,
+then goes down a bit from 9am to 10am, then starts rising from 11am till
+its new peak of the day around 5pm.
+
+On weekends, number of riders don't reach its normal week day level till
+9 or 10, then keeps rising and stays at relatively high level till 18pm
+or 19pm.
+
+5.  **How do riders behave differently across quarters?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(position="dodge",mapping = aes(x=quarter,fill=member_casual))+labs(title=("How do riders behave differently across quarters?"),subtitle ="Casual vs Member", x="User type", y="Number of rides",legend="User type")+scale_fill_discrete(name="User type")
+```
+
+```{r}
+trip_data_clean %>% group_by(member_casual,quarter) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(count))
+```
+
+*Findings:*
+
+Rides peaked in Q3 and valleyed in Q1 for both members and the casual.
+
+Interesting to see, only in Q3, more rides were taken by the casual than
+members.
+
+6.  **How do riders behave differently across all months of the year?**
+
+```{r}
+ggplot(data = trip_data_clean)+geom_bar(position="dodge",mapping = aes(x=factor(month,levels = (c('January','February','March','April','May','June','July','August','September','October','November','December'))),fill=member_casual))+labs(title=("How do riders behave differently across all months of the year?"),subtitle ="Casual vs Member", x="User type", y="Number of rides",legend="User type")+scale_fill_discrete(name="User type")+theme(axis.text.x = element_text(angle = 45))
+```
+
+*Findings:*
+
+Throughout the year, again, number of rides taken either by members or
+the casual moved in the same direction.
+
+Number of rides by members peaked in August while number of rides by the
+casual peaked a little earlier in July.
+
+7.  **Where do riders start their rides and where do they go?**
+
+**First**, let's get the map of Chicago. To decide the 'bbox' values, I
+go to [openstreetmap](http://www.openstreetmap.org)
+
+```{r include=FALSE}
+library(ggplot2)
+library(maps)
+install.packages("ggmap")
+library(ggmap)
+```
+
+```{r include=FALSE}
+map_chicago<-get_stamenmap(bbox = c(left=-88.3, bottom=41.3, right=-87.0, top=42.4), maptype="terrain",zoom = 11)
+ggmap(map_chicago)
+```
+
+**Second**, plot starting points and ending points on the map of Chicago
+
+```{r}
+ggmap(map_chicago)+geom_jitter(trip_data_clean,mapping = aes(x=start_lng,y=start_lat),color="yellow")+facet_wrap(~member_casual)+labs(title = "Where do riders start their rides?",subtitle = "Casual vs Member from 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+
+ggmap(map_chicago)+geom_jitter(trip_data_clean,mapping = aes(x=end_lng,y=end_lat),color="red")+facet_wrap(~member_casual)+labs(title = "Where do riders go with their rides?",subtitle = "Casual vs Member from 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+```
+
+*Findings:*
+
+Members and the casual have very similar behavior pattern in terms of
+where they start their rides (in yellow) and where they go with rides
+(in red). But occasionally, the casual are more likely to take rides to
+places along the coast that are further away from the city center than
+members.
+
+8.  **How do users use different bikes?**
+
+```{r}
+ggmap(map_chicago)+geom_jitter(filter(trip_data_clean,member_casual=="member"),mapping = aes(x=end_lng,y=end_lat),color="red")+facet_grid(~rideable_type)+labs(title = "Where do members go with their rides?",subtitle = "From 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+ggmap(map_chicago)+geom_jitter(filter(trip_data_clean,member_casual=="casual"),mapping = aes(x=end_lng,y=end_lat),color="red")+facet_grid(~rideable_type)+labs(title = "Where do the casual go with their rides?",subtitle = "From 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+ggmap(map_chicago)+geom_jitter(filter(trip_data_clean,member_casual=="member"),mapping = aes(x=start_lng,y=start_lat),color="red")+facet_grid(~rideable_type)+labs(title = "Where do members start their rides with differnet bikes?",subtitle = "From 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+ggmap(map_chicago)+geom_jitter(filter(trip_data_clean,member_casual=="casual"),mapping = aes(x=start_lng,y=start_lat),color="red")+facet_grid(~rideable_type)+labs(title = "Where do the casual start their rides with different bikes?",subtitle = "From 2021-04 to 2022-03", x="Lng", y=" Lat")+theme(axis.text.x = element_text(angle = 90))
+
+trip_data_clean %>% group_by(end_station_name,member_casual,rideable_type) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(count))
+```
+
+*Findings:*
+
+Electric bikes are most likely chosen for longer rides.
+
+## Summary of the analysis
+
+1.  **Which user type bikes more?**
+
+From the data provided, we can clearly see that more rides were taken by
+members (56%) than the casual (44%). But we don't know how many distinct
+members/the casual have taken the rides. Unique user ids linked to rides
+should be requested to be able to find out how often members and the
+casual bike respectively.
+
+2.  **How long do they bike?**
+
+From the table summarized above, the casual, on average, spent 1923 secs
+(32mins) / ride biking while members spent 777 secs (12mins) / ride.. It
+verifies the hypothesis made earlier that the casual are more likely to
+ride for leisure while members are more likely to ride to commute for
+efficiency.
+
+3.  **Where do they bike?**
+
+On maps plotted with starting and ending points of rides, very identical
+shapes are presented for both members and the casual except a few
+outliers. In other words, riders, regardless of user type, bike on
+identical routes, except that the casual,occasionally, bike further away
+from the city center along the coast. The outliers also verifies that
+the casual are more likely to bike for leisure.
+
+4.  **When do they bike?**
+
+Members tend to bike more on week days to commute to work from 7 to 8 am
+and commute back from work from 5-6 pm; and rides by members are less
+prone to change due to season / weather change because of its nature as
+necessary vehicles to commute. On the other hand, the casual tend to
+bike for leisure mostly on weekends and Friday and are more prone to
+change due to season/weather change. For both members and the casual,
+the majority of rides happened in the afternoon before evening.
+
+5.  **Which type of bike do they choose?**
+
+Almost 70% of all rides taken are classic bikes, 43% by members and 27%
+by the casual respectively. 7% of rides taken are docked bikes and are
+all by the casual. The rest of 23% are electric bikes, with 13% by
+members and 10% by the casual. Combined with additional data regarding
+different pricing plans for each type of bike and financial data should
+help refine Cyclistic's offerings to convert the casual to annual
+members.
+
+6.  **Why do they bike?**
+
+Based on the analysis above, members probably bike for leisure and to
+commute, while the casual mainly bike for leisure.
+
+## Top three recommendations
+
+1.  Marketing campaign should focus on biking for leisure, focusing on
+    classic bikes and docked bikes. The top destinations for the casual
+    are below:
+
+```{r}
+trip_data_clean %>% filter(member_casual=="casual") %>% group_by(end_station_name,member_casual,rideable_type) %>% summarise(count=length(ride_id),"%"=length(ride_id)/nrow(trip_data_clean)*100) %>% arrange(desc(count))
+```
+
+2.  More budget should be put towards Friday and weekends in the
+    afternoon, especially in Q3.
+3.  New bike types and new pricing plans that are specifically tailored
+    to the nature of casual riders (bike for leisure) could be offered,
+    for example, dualie bikes with weekly/monthly/quarterly plans.
